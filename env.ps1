@@ -11,3 +11,6 @@ $networkSecuritGroupName="app-nsg"
 #VM Name & Size
 $vmName="appvm1"
 $vmSize="Standard_DS2_v2"
+
+#data disk
+$diskName="app-data-disk"
