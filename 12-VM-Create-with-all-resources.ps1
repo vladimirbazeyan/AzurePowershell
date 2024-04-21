@@ -7,7 +7,6 @@ $subnetAddressPrefix="10.0.0.0/24"
 $networkInterfacename="app-net-interface"
 $publicIpAddress="pub-ip"
 $networkSecuritGroupName="app-nsg"
-
 #VM Name & Size
 $vmName="appvm1"
 $vmSize="Standard_DS2_v2"
@@ -22,16 +21,15 @@ New-AzResourceGroup -Name $resourceGroup -Location $location
 
 
 #Creating Virtual Network
-
 #Creating object SubnetConfig
 $subnet=New-AzVirtualNetworkSubnetConfig -Name $subnetName -AddressPrefix $subnetAddressPrefix
-#Creating Virtual Network with subnet object
-$publicIpaddress=New-AzVirtualNetwork -ResourceGroupName $resourceGroup -Location $location -Name $networkName -AddressPrefix $addressPrefix -Subnet $subnet
+#Creating Virtual Network with sunet object
+New-AzVirtualNetwork -ResourceGroupName $resourceGroup -Location $location -Name $networkName -AddressPrefix $addressPrefix -Subnet $subnet
 
 
 #adding Public IP Address
 New-AzPublicIpAddress -Name $publicIpAddress -ResourceGroupName $resourceGroup -Location $location -AllocationMethod Static
-
+$publicIpAddress_obj=Get-AzPublicIpAddress -Name $publicIpAddress -ResourceGroupName $resourceGroup
 
 #Getting Object VirtualNetowrk
 $virtualNetwork=Get-AzVirtualNetwork -Name $networkName -ResourceGroupName $resourceGroup
@@ -39,14 +37,16 @@ $virtualNetwork=Get-AzVirtualNetwork -Name $networkName -ResourceGroupName $reso
 $subnet=Get-AzVirtualNetworkSubnetConfig -Name $subnetName -VirtualNetwork $virtualNetwork
 
 
-$networkinterface=New-AzNetworkInterface -Name $networkInterfacename -ResourceGroupName $resourceGroup -Location $location -SubnetId $subnet.Id -IpConfigurationName "ipConfigapp"
+$networkinterface_obj=New-AzNetworkInterface -Name $networkInterfacename -ResourceGroupName $resourceGroup -Location $location -SubnetId $subnet.Id -IpConfigurationName "ipConfigapp"
 
 
 #Attache public IP address to network interface
 #Network interface needs to be attached to ipconfig on network interface
-$ipconfig=Get-AzNetworkInterfaceIpConfig -NetworkInterface $networkinterface
-$networkinterface | Set-AzNetworkInterfaceIpConfig -PublicIpAddress $publicIpAddress -Name $ipconfig.Name
-$networkinterface | Set-AzNetworkInterface 
+$ipconfig=Get-AzNetworkInterfaceIpConfig -NetworkInterface $networkinterface_obj
+
+
+$networkinterface_obj | Set-AzNetworkInterfaceIpConfig -PublicIpAddress $publicIpAddress_obj -Name $ipconfig.Name
+$networkinterface_obj | Set-AzNetworkInterface 
 
 
 #Creating NSG
@@ -66,16 +66,10 @@ $networksecuritygroup=New-AzNetworkSecurityGroup -Name $networkSecuritGroupName 
 #Attache the NSG to the subnet
 Set-AzVirtualNetworkSubnetConfig -Name $subnetName -VirtualNetwork $virtualNetwork `
 -NetworkSecurityGroup $networksecuritygroup -AddressPrefix $addressPrefix
-
 $virtualNetwork | Set-AzVirtualNetwork
 
+read-host "prese enter to continue ..."
 
-#Creating Virtual machin
-#    $vmName="appvm1"
-#    $vmSize="Standard_DS2_v2"
-# To get available VM Sizes execut
-    Get-AzVMSize -Location 'West US' 
-#
 
 #creating windows credentials for VM
 $Credential=Get-Credential
@@ -97,4 +91,14 @@ $vm=Add-AzVMNetworkInterface -VM $vmConfig -Id $networkInterface.Id
 
 Set-AzVMBootDiagnostic -Disable -Vm $vm
 
+#creating and updating data disk
+Add-AzVmDataDisk -Name $diskName -DiskSizeInGB 16 -CreateOption Empty -Lun 0 -VM $vm
+
 New-AzVM -ResourceGroupName $resourceGroup -Location $location -VM $vm
+
+
+
+
+# $vm=Get-AzVM -ResourceGroupName $resourceGroup -Name $vmName
+# $vm | Add-AzVmDataDisk -Name $diskName -DiskSizeInGB 16 -CreateOption Empty -Lun 0 #which one need to attache
+# $vm | Update-AzVM
